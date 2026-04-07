@@ -77,7 +77,7 @@ int Embedded::Proj1::Hello() {
     return -1; // placeholder
 }
 
-int Embedded::Proj1::nvme_passthru(/* define parameters here */)
+int Embedded::Proj1::nvme_passthru(/* define parameters here */__u8 opcode,__u32 nsid, std::vector<uint8_t> &buf,__u32 data_len,__u32 cdw10,__u32 cdw11,__u32 cdw12)
 {
     /* ------------------------------------------------------------------
      * TODO: Implement this function.
@@ -114,9 +114,14 @@ int Embedded::Proj1::nvme_passthru(/* define parameters here */)
     };
     */
     struct nvme_passthru_cmd cmd;
-    cmd.opcode = ;
-    
-
+    cmd.opcode;
+    cmd.nsid;
+    cmd.addr;
+    cmd.data_len;
+    cmd.cdw10;
+	cmd.cdw11;
+	cmd.cdw12;
+    int ret= ioctl(fd_,NVME_IOCTL_IO_CMD,&cmd);
     return -1; // placeholder
 }
 
