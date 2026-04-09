@@ -11,6 +11,8 @@
 #include <iostream>
 #include <cstdio>
 #include <inttypes.h>
+#include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -64,7 +66,7 @@ int Embedded::Proj1::ImageRead(std::vector<uint8_t> &buf, size_t size) {
      * Return 0 on success, or a negative error code on failure.
      * ------------------------------------------------------------------ */
     buf.resize(size);
-    return nvme_passthru(NVME_CMD_READ,buf.data(),size,0, size/PAGE_SIZE);
+    return nvme_passthru(NVME_CMD_READ,buf.data(),size,0, size / PAGE_SIZE);
 }
 
 int Embedded::Proj1::Hello() {
