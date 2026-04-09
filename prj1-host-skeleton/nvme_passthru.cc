@@ -49,7 +49,6 @@ int Embedded::Proj1::ImageWrite(const std::vector<uint8_t> &buf) {
      * 
      * Return 0 on success, or a negative error code on failure.
      * ------------------------------------------------------------------ */
-
     return nvme_passthru(NVME_CMD_WRITE,const_cast<uint8_t*>(buf.data()),buf.size(),0,buf.size()/PAGE_SIZE);
 }
 
@@ -84,7 +83,7 @@ int Embedded::Proj1::nvme_passthru(
     uint8_t opcode, 
     void *addr,
     uint32_t data_len,
-    uint64_t slba,
+    uint64_t start_lba,
     uint32_t blocks_cnt
 ){
     /* ------------------------------------------------------------------
@@ -126,9 +125,9 @@ int Embedded::Proj1::nvme_passthru(
     cmd.nsid=NSID;
     cmd.addr=(uint64_t)(char*)addr;
     cmd.data_len=data_len;
-    cmd.cdw10=(uint32_t)(slba&0xFFFFFFFF);
-	cmd.cdw11=(uint32_t)(slba>>32);
-	cmd.cdw12=(uint64_t)(blocks_cnt&0x0000FFFF);
+    cmd.cdw10=(uint32_t)(start_lba&0xFFFFFFFF);
+	cmd.cdw11=(uint32_t)(start_lba>>32);
+	cmd.cdw12=(uint64_t)((blocks_cnt-1)&0xFFFF);
     int ret= ioctl(fd_,NVME_IOCTL_IO_CMD,&cmd);
     return ret;
 }
