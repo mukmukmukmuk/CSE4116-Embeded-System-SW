@@ -27,7 +27,7 @@ make
 
 ### Usage
 ```bash
-./test input.png output.png
+sudo ./test input.png output.png
 ```
 
 - `input.png` will be written to the device.  
