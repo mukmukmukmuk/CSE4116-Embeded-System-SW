@@ -49,7 +49,47 @@ int Embedded::Proj1::ImageWrite(const std::vector<uint8_t> &buf) {
      * 
      * Return 0 on success, or a negative error code on failure.
      * ------------------------------------------------------------------ */
-    return nvme_passthru(NVME_CMD_WRITE,const_cast<uint8_t*>(buf.data()),buf.size(),0,buf.size()/PAGE_SIZE);
+    // lsa 옮겨주기
+    // block num은 0-base
+    uint64_t lba = 0;
+    size_t offset = 0;
+    const size_t buf_size=buf.size();
+    const uint8_t *buf_data = buf.data();
+    while (offset < buf_size) {
+        // 자른거
+        size_t chunk_len = min((size_t)(DMA_CHUNK_SIZE), buf_size - offset);
+        // block_cnt를 올림 해줘서 나머지 부분들 살려줌
+        uint32_t blocks_cnt = (uint32_t)((chunk_len + (PAGE_SIZE - 1)) / PAGE_SIZE);
+        
+        // 올림한 거 해서 토탈 보낼 수 있는거
+        size_t xfer_len = (size_t)blocks_cnt * PAGE_SIZE;
+
+        //cout<< "DMA CHUNK SIZE(write) : " <<chunk_len<<endl;
+        void *addr = (void *)(buf_data + offset);
+        //만약에 떨거지들이 남았을때, 이때도 결국 chunck size만큼으로 보내야하니까,
+        //남는 공간을 0으로 채워서 보냄
+        vector<uint8_t> padded;
+        if (xfer_len > chunk_len) {
+            padded.resize(xfer_len, 0);
+            memcpy(padded.data(), buf_data + offset, chunk_len);
+            addr = padded.data();
+        }
+
+
+        int res = nvme_passthru(
+            NVME_CMD_WRITE, 
+            addr, 
+            xfer_len, 
+            lba, 
+            blocks_cnt
+        );
+        if (res < 0) return res;
+        
+        offset += chunk_len;
+        lba += blocks_cnt;
+    }
+
+    return 0;
 }
 
 int Embedded::Proj1::ImageRead(std::vector<uint8_t> &buf, size_t size) {
@@ -65,7 +105,43 @@ int Embedded::Proj1::ImageRead(std::vector<uint8_t> &buf, size_t size) {
      * Return 0 on success, or a negative error code on failure.
      * ------------------------------------------------------------------ */
     buf.resize(size);
-    return nvme_passthru(NVME_CMD_READ,buf.data(),size,0, size / PAGE_SIZE);
+
+    uint64_t lba = 0;
+    size_t offset = 0;
+    const size_t buf_size = buf.size();
+    uint8_t *buf_data = buf.data();
+
+    while (offset < buf_size) {
+        size_t chunk_len = min((size_t)DMA_CHUNK_SIZE, buf_size - offset);
+        uint32_t blocks_cnt = (uint32_t)((chunk_len + PAGE_SIZE - 1) / PAGE_SIZE);
+        size_t xfer_len = (size_t)blocks_cnt * PAGE_SIZE;
+
+        void *addr = buf_data + offset;
+        //cout<< "DMA CHUNK SIZE(read) : " <<chunk_len<<endl;
+        vector<uint8_t> padded;
+        if (xfer_len > chunk_len) {
+            padded.resize(xfer_len, 0);
+            addr = padded.data();
+        }
+
+        int res = nvme_passthru(
+            NVME_CMD_READ,
+            addr,
+            xfer_len,
+            lba,
+            blocks_cnt
+        );
+        if (res < 0) return res;
+
+        if (xfer_len > chunk_len) {
+            memcpy(buf_data + offset, padded.data(), chunk_len);
+        }
+
+        offset += chunk_len;
+        lba += blocks_cnt;
+    }
+
+    return 0;
 }
 
 int Embedded::Proj1::Hello() {
@@ -120,7 +196,7 @@ int Embedded::Proj1::nvme_passthru(
 	__u32	result;
     };
     */
-    struct nvme_passthru_cmd cmd={};
+    struct nvme_passthru_cmd cmd{};
     cmd.opcode=opcode;
     cmd.nsid=NSID;
     cmd.addr=(uint64_t)(char*)addr;
@@ -128,7 +204,7 @@ int Embedded::Proj1::nvme_passthru(
     cmd.cdw10=(uint32_t)(start_lba&0xFFFFFFFF);
 	cmd.cdw11=(uint32_t)(start_lba>>32);
 	cmd.cdw12=(uint64_t)((blocks_cnt-1)&0xFFFF);
-    int ret= ioctl(fd_,NVME_IOCTL_IO_CMD,&cmd);
-    return ret;
+    int res= ioctl(fd_,NVME_IOCTL_IO_CMD,&cmd);
+    return res;
 }
 
