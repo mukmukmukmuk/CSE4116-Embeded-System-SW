@@ -150,8 +150,14 @@ int Embedded::Proj1::Hello() {
      * 
      * Return 0 on success, or a negative error code on failure.
      * ------------------------------------------------------------------ */
-
-    return -1; // placeholder
+    int res = nvme_passthru(
+                NVME_CMD_HELLO,
+                0,
+                0,
+                0,
+                1
+                );
+    return res;
 }
 
 int Embedded::Proj1::nvme_passthru(
