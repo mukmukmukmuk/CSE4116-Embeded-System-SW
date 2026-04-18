@@ -154,6 +154,21 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 			handle_nvme_io_read(nvmeCmd->cmdSlotTag, nvmeIOCmd);
 			break;
 		}
+		case IO_NVM_HELLO:
+		{
+			xil_printf(
+				"[IO HELLO Command]\r\n"
+				"Name: Seungmuk Kang\r\n"
+				"Student ID: 20211496\r\n"
+				"Affiliation: Sogang University Computer Science and Engineering\r\n"
+				"Interests: Embedded Systems and Operating Systems\r\n"
+				"Hobbies: Coding, Boxing\r\n"
+			);
+			nvmeCPL.dword[0] = 0;
+			nvmeCPL.specific = 0x0;
+			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+			break;
+		}
 		default:
 		{
 			xil_printf("Not Support IO Command OPC: %X\r\n", opc);
