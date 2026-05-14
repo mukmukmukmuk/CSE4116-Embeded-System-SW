@@ -639,25 +639,109 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 	}
 	else
 		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+	/*
+	unsigned int AddrTransRead(unsigned int logicalSliceAddr)
+	{
+		unsigned int logicalBlockNo, offset;
+		unsigned int baseVSA, dieNo, blockNo;
+
+		if (logicalSliceAddr >= SLICES_PER_SSD)
+			assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+
+		logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
+		offset = logicalSliceAddr % SLICES_PER_BLOCK;
+
+		baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
+
+		if (baseVSA == VSA_NONE)
+			return VSA_FAIL;
+
+		dieNo = Vsa2VdieTranslation(baseVSA);
+		blockNo = Vsa2VblockTranslation(baseVSA);
+
+		return Vorg2VsaTranslation(dieNo, blockNo, offset);
+	}
+	*/
 }
 
+//SLICES_PER_BLOCK : NAND BLOCK안에 있는 PAGE 개수, 그리고 NAND PAGE = SLICE
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 {
-	unsigned int virtualSliceAddr;
-
-	if(logicalSliceAddr < SLICES_PER_SSD)
+	if(logicalSliceAddr >= SLICES_PER_SSD)
+		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+	unsigned int virtualSliceAddr, logicalBlockNo, offset, dieNo, blockNo , baseVSA;
+	logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
+	offset    = logicalSliceAddr % SLICES_PER_BLOCK;
+	//LBN -> PBN , Base VSA을 mapping table에 저장
+	baseVSA=logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
+	if(baseVSA==VSA_NONE){
+		//mapping이 안된거라면, 새로운 block 할당 해줘야함
+		dieNo = sliceAllocationTargetDie;
+		blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
+		if (blockNo == BLOCK_FAIL)
+			assert(!"[WARNING] There is no available block [WARNING]");
+		baseVSA = Vorg2VsaTranslation(dieNo, blockNo, 0);
+		logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr = baseVSA;
+		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
+		return virtualSliceAddr;
+	}
+	else{
+		//mapping이 된 상태니까 걍 쓰면 됨
+		dieNo   = Vsa2VdieTranslation(baseVSA);
+		blockNo = Vsa2VblockTranslation(baseVSA);
+		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
+		return virtualSliceAddr;
+	}
+	/*
+	unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 	{
-		InvalidateOldVsa(logicalSliceAddr);
+		unsigned int virtualSliceAddr, logicalBlockNo, offset;
+		unsigned int dieNo, blockNo, baseVSA;
 
-		virtualSliceAddr = FindFreeVirtualSlice();
+		if (logicalSliceAddr >= SLICES_PER_SSD)
+			assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = virtualSliceAddr;
+		logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
+		offset = logicalSliceAddr % SLICES_PER_BLOCK;
+
+		baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
+
+		if (baseVSA == VSA_NONE)
+		{
+			dieNo = sliceAllocationTargetDie;
+
+			blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
+			if (blockNo == BLOCK_FAIL)
+			{
+				GarbageCollection(dieNo);
+				blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
+				if (blockNo == BLOCK_FAIL)
+					assert(!"[WARNING] There is no available block [WARNING]");
+			}
+
+			baseVSA = Vorg2VsaTranslation(dieNo, blockNo, 0);
+			logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr = baseVSA;
+
+			sliceAllocationTargetDie = FindDieForFreeSliceAllocation();
+		}
+		else
+		{
+			dieNo = Vsa2VdieTranslation(baseVSA);
+			blockNo = Vsa2VblockTranslation(baseVSA);
+		}
+
+		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
+
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
+
+		if (virtualBlockMapPtr->block[dieNo][blockNo].currentPage <= offset)
+			virtualBlockMapPtr->block[dieNo][blockNo].currentPage = offset + 1;
 
 		return virtualSliceAddr;
 	}
-	else
-		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+
+	
+	*/
 }
 
 
