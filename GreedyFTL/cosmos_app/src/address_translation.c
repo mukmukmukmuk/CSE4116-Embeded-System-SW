@@ -626,122 +626,83 @@ void InitBlockDieMap()
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 {
-	unsigned int virtualSliceAddr;
+	unsigned int logicalBlockNo, offset, virtualSliceAddr;
+	unsigned int baseVSA, dieNo, blockNo;
 
-	if(logicalSliceAddr < SLICES_PER_SSD)
-	{
-		virtualSliceAddr = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
-
-		if(virtualSliceAddr != VSA_NONE)
-			return virtualSliceAddr;
-		else
-			return VSA_FAIL;
-	}
-	else
+	if (logicalSliceAddr >= SLICES_PER_SSD)
 		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
-	/*
-	unsigned int AddrTransRead(unsigned int logicalSliceAddr)
-	{
-		unsigned int logicalBlockNo, offset;
-		unsigned int baseVSA, dieNo, blockNo;
 
-		if (logicalSliceAddr >= SLICES_PER_SSD)
-			assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+	logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
+	offset = logicalSliceAddr % SLICES_PER_BLOCK;
 
-		logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
-		offset = logicalSliceAddr % SLICES_PER_BLOCK;
+	baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
 
-		baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
+	if (baseVSA == VSA_NONE)
+		return VSA_FAIL;
 
-		if (baseVSA == VSA_NONE)
-			return VSA_FAIL;
+	dieNo = Vsa2VdieTranslation(baseVSA);
+	blockNo = Vsa2VblockTranslation(baseVSA);
+	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
 
-		dieNo = Vsa2VdieTranslation(baseVSA);
-		blockNo = Vsa2VblockTranslation(baseVSA);
+	//실제로 write된 page인지 확인하는 코드
+	if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr != logicalSliceAddr)
+        return VSA_FAIL;
 
-		return Vorg2VsaTranslation(dieNo, blockNo, offset);
-	}
-	*/
+	return virtualSliceAddr;
 }
 
 //SLICES_PER_BLOCK : NAND BLOCK안에 있는 PAGE 개수, 그리고 NAND PAGE = SLICE
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 {
-	if(logicalSliceAddr >= SLICES_PER_SSD)
+	unsigned int virtualSliceAddr, logicalBlockNo, offset;
+	unsigned int dieNo, blockNo, baseVSA;
+
+	if (logicalSliceAddr >= SLICES_PER_SSD)
 		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
-	unsigned int virtualSliceAddr, logicalBlockNo, offset, dieNo, blockNo , baseVSA;
+
 	logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
-	offset    = logicalSliceAddr % SLICES_PER_BLOCK;
-	//LBN -> PBN , Base VSA을 mapping table에 저장
-	baseVSA=logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
-	if(baseVSA==VSA_NONE){
-		//mapping이 안된거라면, 새로운 block 할당 해줘야함
+	offset = logicalSliceAddr % SLICES_PER_BLOCK;
+
+	// LBN -> physical block base VSA
+	baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
+
+	//맵에 없으면, 새로 깨끗한 블럭 하나를 할당 받아야함
+	if (baseVSA == VSA_NONE){
 		dieNo = sliceAllocationTargetDie;
+
+		//새 깔끔한 블럭 할당 받기
 		blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
-		if (blockNo == BLOCK_FAIL)
+		
+		if (blockNo == BLOCK_FAIL) {
+			//GC를 수정해야하는데 이러면 해당 프로젝트의 범위를 넘어감
+			// GarbageCollection(dieNo);
+			// blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
+			// if (blockNo == BLOCK_FAIL)
 			assert(!"[WARNING] There is no available block [WARNING]");
+		}
+
 		baseVSA = Vorg2VsaTranslation(dieNo, blockNo, 0);
 		logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr = baseVSA;
-		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
-		return virtualSliceAddr;
+		
+		//다음 할당 받을 때는 다른 다이로 가도록 타겟 die 설정
+		sliceAllocationTargetDie = FindDieForFreeSliceAllocation();
 	}
+	//맵에 있으면 걍 보내면 됨. 오프셋 추가해서
 	else{
-		//mapping이 된 상태니까 걍 쓰면 됨
-		dieNo   = Vsa2VdieTranslation(baseVSA);
+		dieNo = Vsa2VdieTranslation(baseVSA);
 		blockNo = Vsa2VblockTranslation(baseVSA);
-		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
-		return virtualSliceAddr;
 	}
-	/*
-	unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
-	{
-		unsigned int virtualSliceAddr, logicalBlockNo, offset;
-		unsigned int dieNo, blockNo, baseVSA;
-
-		if (logicalSliceAddr >= SLICES_PER_SSD)
-			assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
-
-		logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
-		offset = logicalSliceAddr % SLICES_PER_BLOCK;
-
-		baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
-
-		if (baseVSA == VSA_NONE)
-		{
-			dieNo = sliceAllocationTargetDie;
-
-			blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
-			if (blockNo == BLOCK_FAIL)
-			{
-				GarbageCollection(dieNo);
-				blockNo = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
-				if (blockNo == BLOCK_FAIL)
-					assert(!"[WARNING] There is no available block [WARNING]");
-			}
-
-			baseVSA = Vorg2VsaTranslation(dieNo, blockNo, 0);
-			logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr = baseVSA;
-
-			sliceAllocationTargetDie = FindDieForFreeSliceAllocation();
-		}
-		else
-		{
-			dieNo = Vsa2VdieTranslation(baseVSA);
-			blockNo = Vsa2VblockTranslation(baseVSA);
-		}
-
-		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
-
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
-
-		if (virtualBlockMapPtr->block[dieNo][blockNo].currentPage <= offset)
-			virtualBlockMapPtr->block[dieNo][blockNo].currentPage = offset + 1;
-
-		return virtualSliceAddr;
-	}
-
 	
-	*/
+	// Random write는 NAND page 순차 program 제약 때문에 logical offset 위치에 쓸 수 없다.
+	// 따라서 현재 program 가능한 page에 기록해 command completion path를 유지한다.
+	if (virtualBlockMapPtr->block[dieNo][blockNo].currentPage != offset)
+    	offset = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
+
+	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
+	virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
+	virtualBlockMapPtr->block[dieNo][blockNo].currentPage++;
+
+	return virtualSliceAddr;
 }
 
 
