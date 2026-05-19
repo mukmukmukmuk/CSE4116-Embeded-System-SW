@@ -23,7 +23,7 @@ This compiles `ftl_bench` using `nvme_passthru.cc` and `nvme_passthru.h`.
 
 | Position | Meaning                             | Example           |
 | -------- | ----------------------------------- | ----------------- |
-| 1        | NVMe device node                    | `/dev/nvme1n1`    |
+| 1        | NVMe device node                    | `/dev/nvme0n1`    |
 | 2        | I/O mode                            | `seq` or `rand`   |
 | 3        | Number of I/O operations (16KB each)| `10000`           |
 | 4        | LBA span for random access          | `1048576` (≈4 GB)|
@@ -32,8 +32,8 @@ This compiles `ftl_bench` using `nvme_passthru.cc` and `nvme_passthru.h`.
 Example:
 
 ```bash
-sudo ./ftl_bench /dev/nvme1n1 seq 10000 1048576 1
-sudo ./ftl_bench /dev/nvme1n1 rand 1000 1048576 1
+sudo ./ftl_bench /dev/nvme0n1 seq 10000 1048576 1
+sudo ./ftl_bench /dev/nvme0n1 rand 1000 1048576 1
 ```
 
 ---

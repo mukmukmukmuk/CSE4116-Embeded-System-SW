@@ -626,7 +626,7 @@ void InitBlockDieMap()
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 {
-	unsigned int logicalBlockNo, offset, virtualSliceAddr;
+	unsigned int logicalBlockNo, offset, virtualSliceAddr,totalPages;
 	unsigned int baseVSA, dieNo, blockNo;
 
 	if (logicalSliceAddr >= SLICES_PER_SSD)
@@ -642,11 +642,12 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 
 	dieNo = Vsa2VdieTranslation(baseVSA);
 	blockNo = Vsa2VblockTranslation(baseVSA);
-	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
 
-	//실제로 write된 page인지 확인하는 코드
-	// if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr != logicalSliceAddr)
-    //     return VSA_FAIL;
+	//현재 Block에서 페이지 개수를 가져와서 그 안에서 뽑도록 강제하기
+	totalPages = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
+	if (totalPages == 0) return VSA_FAIL;
+	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset%totalPages);
+
 	return virtualSliceAddr;
 }
 
@@ -660,8 +661,6 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 
 	logicalBlockNo = logicalSliceAddr / SLICES_PER_BLOCK;
-	offset = logicalSliceAddr % SLICES_PER_BLOCK;
-
 	// LBN -> physical block base VSA
 	baseVSA = logicalSliceMapPtr->logicalSlice[logicalBlockNo].virtualSliceAddr;
 
@@ -692,10 +691,10 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 		blockNo = Vsa2VblockTranslation(baseVSA);
 	}
 	
-	// Random write는 NAND page 순차 program 제약 때문에 logical offset 위치에 쓸 수 없다.
-	// 따라서 현재 program 가능한 page에 기록해 command completion path를 유지한다.
-	if (virtualBlockMapPtr->block[dieNo][blockNo].currentPage != offset)
-    	offset = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
+	//어차피 순차적으로 써야하므로 offset을, PPN으로 강제
+	offset = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
+	if (offset >= USER_PAGES_PER_BLOCK) 
+		assert(!"[WARNING] Current page management fail [WARNING]");
 
 	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
 	virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
