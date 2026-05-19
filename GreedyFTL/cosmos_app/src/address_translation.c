@@ -645,9 +645,8 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 	virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, offset);
 
 	//실제로 write된 page인지 확인하는 코드
-	if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr != logicalSliceAddr)
-        return VSA_FAIL;
-
+	// if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr != logicalSliceAddr)
+    //     return VSA_FAIL;
 	return virtualSliceAddr;
 }
 
