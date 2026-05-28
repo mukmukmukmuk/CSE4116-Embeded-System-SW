@@ -116,6 +116,62 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0] + (storageCapacity_L / USER_CHANNELS) * (nsid - 1), nlb, IO_NVM_WRITE);
 }
 
+void handle_nvme_io_cmd_kv_put(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
+{
+	IO_READ_COMMAND_DW12 writeInfo12;
+	//IO_READ_COMMAND_DW13 writeInfo13;
+	//IO_READ_COMMAND_DW15 writeInfo15;
+	unsigned int startLba[2];
+	unsigned int nlb;
+	unsigned int nsid = nvmeIOCmd->NSID;
+
+	writeInfo12.dword = nvmeIOCmd->dword[12];
+	//writeInfo13.dword = nvmeIOCmd->dword[13];
+	//writeInfo15.dword = nvmeIOCmd->dword[15];
+
+	//if(writeInfo12.FUA == 1)
+	//	xil_printf("write FUA\r\n");
+
+	startLba[0] = nvmeIOCmd->dword[10];
+	startLba[1] = nvmeIOCmd->dword[11];
+	nlb = writeInfo12.NLB;
+
+	ASSERT(startLba[0] < storageCapacity_L / USER_CHANNELS && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));
+	//ASSERT(nlb < MAX_NUM_OF_NLB);
+	ASSERT((nvmeIOCmd->PRP1[0] & 0xF) == 0 && (nvmeIOCmd->PRP2[0] & 0xF) == 0);
+	ASSERT(nvmeIOCmd->PRP1[1] < 0x10000 && nvmeIOCmd->PRP2[1] < 0x10000);
+
+	ReqTransNvmeToSlice(cmdSlotTag, startLba[0] + (storageCapacity_L / USER_CHANNELS) * (nsid - 1), nlb, IO_NVM_WRITE);
+}
+
+void handle_nvme_io_cmd_kv_get(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
+{
+	IO_READ_COMMAND_DW12 writeInfo12;
+	//IO_READ_COMMAND_DW13 writeInfo13;
+	//IO_READ_COMMAND_DW15 writeInfo15;
+	unsigned int startLba[2];
+	unsigned int nlb;
+	unsigned int nsid = nvmeIOCmd->NSID;
+
+	writeInfo12.dword = nvmeIOCmd->dword[12];
+	//writeInfo13.dword = nvmeIOCmd->dword[13];
+	//writeInfo15.dword = nvmeIOCmd->dword[15];
+
+	//if(writeInfo12.FUA == 1)
+	//	xil_printf("write FUA\r\n");
+
+	startLba[0] = nvmeIOCmd->dword[10];
+	startLba[1] = nvmeIOCmd->dword[11];
+	nlb = writeInfo12.NLB;
+
+	ASSERT(startLba[0] < storageCapacity_L / USER_CHANNELS && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));
+	//ASSERT(nlb < MAX_NUM_OF_NLB);
+	ASSERT((nvmeIOCmd->PRP1[0] & 0xF) == 0 && (nvmeIOCmd->PRP2[0] & 0xF) == 0);
+	ASSERT(nvmeIOCmd->PRP1[1] < 0x10000 && nvmeIOCmd->PRP2[1] < 0x10000);
+
+	ReqTransNvmeToSlice(cmdSlotTag, startLba[0] + (storageCapacity_L / USER_CHANNELS) * (nsid - 1), nlb, IO_NVM_WRITE);
+}
+
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {
 	NVME_IO_COMMAND *nvmeIOCmd;
@@ -167,6 +223,16 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 			nvmeCPL.dword[0] = 0;
 			nvmeCPL.specific = 0x0;
 			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+			break;
+		}
+		case IO_NVME_CMD_KV_PUT:
+		{
+			handle_nvme_io_cmd_kv_put(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			break;
+		}
+		case IO_NVME_CMD_KV_GET:
+		{
+			handle_nvme_io_cmd_kv_get(nvmeCmd->cmdSlotTag, nvmeIOCmd);
 			break;
 		}
 		default:

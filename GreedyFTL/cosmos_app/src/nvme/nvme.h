@@ -87,6 +87,8 @@
 #define IO_NVM_COMPARE										0x05
 #define IO_NVM_DATASET_MANAGEMENT							0x09
 #define IO_NVM_HELLO										0x10
+#define IO_NVME_CMD_KV_PUT									0xA0
+#define IO_NVME_CMD_KV_GET									0xA1
 
 /*Status Code Type */
 #define SCT_GENERIC_COMMAND_STATUS							0
