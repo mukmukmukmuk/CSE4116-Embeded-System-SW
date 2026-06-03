@@ -18,6 +18,16 @@ static unsigned int kvFtlNextLba = 0;
 static unsigned int kvFtlPendingGetLength[KV_FTL_CMD_SLOT_COUNT];
 static unsigned int kvFtlPendingPutCompletion[KV_FTL_CMD_SLOT_COUNT];
 
+static unsigned int KvFtlBlockCountFromLength(unsigned int valueLength)
+{
+	return (valueLength + BYTES_PER_NVME_BLOCK - 1) / BYTES_PER_NVME_BLOCK;
+}
+
+static unsigned int KvFtlCapacityBlocks(void)
+{
+	return storageCapacity_L;
+}
+
 void InitKvFtl(void)
 {
 	unsigned int key;
@@ -52,6 +62,7 @@ unsigned int KvFtlPut(unsigned int key,
 {
 	unsigned int allocatedLba;
 	unsigned int blockCount;
+	unsigned int oldBlockCount;
 
 	InitKvFtl();
 
@@ -59,7 +70,23 @@ unsigned int KvFtlPut(unsigned int key,
 		return KV_FTL_INVALID_KEY;
 
 	blockCount = nlb + 1;
-	if((kvFtlNextLba + blockCount) > (storageCapacity_L / USER_CHANNELS))
+	if(kvFtlIndex[key].startLba != KV_FTL_INVALID_LBA)
+	{
+		oldBlockCount = KvFtlBlockCountFromLength(kvFtlIndex[key].valueLength);
+		if(blockCount <= oldBlockCount)
+		{
+			allocatedLba = kvFtlIndex[key].startLba;
+			kvFtlIndex[key].valueLength = valueLength;
+			if(kvFtlIndex[key].valueLength == 0)
+				kvFtlIndex[key].valueLength = blockCount * BYTES_PER_NVME_BLOCK;
+
+			*startLba = allocatedLba;
+
+			return KV_FTL_SUCCESS;
+		}
+	}
+
+	if((kvFtlNextLba + blockCount) > KvFtlCapacityBlocks())
 		return KV_FTL_CAPACITY_FULL;
 
 	allocatedLba = kvFtlNextLba;
