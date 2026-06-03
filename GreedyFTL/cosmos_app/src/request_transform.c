@@ -53,6 +53,7 @@
 #include "nvme/host_lld.h"
 #include "memory_map.h"
 #include "ftl_config.h"
+#include "kv_ftl.h"
 
 P_ROW_ADDR_DEPENDENCY_TABLE rowAddrDependencyTablePtr;
 
@@ -574,7 +575,7 @@ void ReleaseBlockedByRowAddrDepReq(unsigned int chNo, unsigned int wayNo)
 
 void IssueNvmeDmaReq(unsigned int reqSlotTag)
 {
-	unsigned int devAddr, dmaIndex, numOfNvmeBlock;
+	unsigned int devAddr, dmaIndex, numOfNvmeBlock, autoCompletion;
 
 	dmaIndex = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex;
 	devAddr = GenerateDataBufAddr(reqSlotTag);
@@ -595,9 +596,13 @@ void IssueNvmeDmaReq(unsigned int reqSlotTag)
 	}
 	else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_TxDMA)
 	{
+		autoCompletion = NVME_COMMAND_AUTO_COMPLETION_ON;
+		if(KvFtlGetPendingGetLength(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag) != 0)
+			autoCompletion = NVME_COMMAND_AUTO_COMPLETION_OFF;
+
 		while(numOfNvmeBlock < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock)
 		{
-			set_auto_tx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, NVME_COMMAND_AUTO_COMPLETION_ON);
+			set_auto_tx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, autoCompletion);
 
 			numOfNvmeBlock++;
 			dmaIndex++;
@@ -612,8 +617,9 @@ void IssueNvmeDmaReq(unsigned int reqSlotTag)
 
 void CheckDoneNvmeDmaReq()
 {
-	unsigned int reqSlotTag, prevReq;
+	unsigned int reqSlotTag, prevReq, cmdSlotTag, valueLength;
 	unsigned int rxDone, txDone;
+	NVME_COMPLETION nvmeCPL;
 
 	reqSlotTag = nvmeDmaReqQ.tailReq;
 	rxDone = 0;
@@ -637,12 +643,23 @@ void CheckDoneNvmeDmaReq()
 				txDone = check_auto_tx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail , reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt);
 
 			if(txDone)
+			{
+				cmdSlotTag = reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag;
+				valueLength = KvFtlGetPendingGetLength(cmdSlotTag);
+
 				SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
+
+				if(valueLength != 0)
+				{
+					KvFtlClearPendingGetLength(cmdSlotTag);
+					nvmeCPL.dword[0] = 0;
+					nvmeCPL.specific = valueLength;
+					set_auto_nvme_cpl(cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+				}
+			}
 		}
 
 		reqSlotTag = prevReq;
 	}
 }
-
-
 

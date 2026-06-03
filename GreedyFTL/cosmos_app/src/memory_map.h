@@ -53,6 +53,7 @@
 #include "request_schedule.h"
 #include "request_transform.h"
 #include "garbage_collection.h"
+#include "kv_ftl.h"
 
 #define DRAM_START_ADDR					0x00100000
 
@@ -103,7 +104,10 @@
 
 #define FTL_MANAGEMENT_END_ADDR				((WAY_PRIORITY_TABLE_ADDR + sizeof(WAY_PRIORITY_TABLE))- 1)
 
-#define RESERVED1_START_ADDR				(FTL_MANAGEMENT_END_ADDR + 1)
+#define KV_FTL_INDEX_TABLE_ADDR				(((FTL_MANAGEMENT_END_ADDR + 1 + 0xFFF) / 0x1000) * 0x1000)
+#define KV_FTL_INDEX_TABLE_END_ADDR			(KV_FTL_INDEX_TABLE_ADDR + KV_FTL_INDEX_TABLE_BYTES - 1)
+
+#define RESERVED1_START_ADDR				(KV_FTL_INDEX_TABLE_END_ADDR + 1)
 #define RESERVED1_END_ADDR					0x3FFFFFFF
 
 #define DRAM_END_ADDR						0x3FFFFFFF
