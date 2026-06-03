@@ -23,7 +23,7 @@ This compiles `kv_bench` using `nvme_passthru.cc` and `nvme_passthru.h`.
 
 | Position | Meaning                                        | Example        |
 | -------- | ---------------------------------------------- | -------------- |
-| 1        | NVMe device node                               | `/dev/nvme1n1` |
+| 1        | NVMe device node                               | `/dev/nvme0n1` |
 | 2        | Number of PUT operations                       | `10000`        |
 | 3        | Keyspace size (range of random key generation) | `4096`         |
 | 4        | NVMe device NSID                               | `1`            |
@@ -31,7 +31,8 @@ This compiles `kv_bench` using `nvme_passthru.cc` and `nvme_passthru.h`.
 Example:
 
 ```bash
-sudo ./kv_bench /dev/nvme1n1 10000 4096 1
+sudo ./kv_bench /dev/nvme0n1 10000 4096 1
+sudo ./kv_bench /dev/nvme0n1 10000000 4194304 1
 ```
 
 ---

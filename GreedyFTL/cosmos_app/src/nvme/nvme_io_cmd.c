@@ -162,6 +162,7 @@ void handle_nvme_io_cmd_kv_put(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOC
 		return;
 	}
 
+	KvFtlSetPendingPutCompletion(cmdSlotTag);
 	ReqTransNvmeToSlice(cmdSlotTag, startLba + (storageCapacity_L / USER_CHANNELS) * (nsid - 1), nlb, IO_NVM_WRITE);
 }
 

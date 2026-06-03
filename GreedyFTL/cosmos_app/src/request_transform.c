@@ -583,9 +583,13 @@ void IssueNvmeDmaReq(unsigned int reqSlotTag)
 
 	if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_RxDMA)
 	{
+		autoCompletion = NVME_COMMAND_AUTO_COMPLETION_ON;
+		if(KvFtlGetPendingPutCompletion(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag) != 0)
+			autoCompletion = NVME_COMMAND_AUTO_COMPLETION_OFF;
+
 		while(numOfNvmeBlock < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock)
 		{
-			set_auto_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, NVME_COMMAND_AUTO_COMPLETION_ON);
+			set_auto_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, autoCompletion);
 
 			numOfNvmeBlock++;
 			dmaIndex++;
@@ -635,7 +639,18 @@ void CheckDoneNvmeDmaReq()
 				rxDone = check_auto_rx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail , reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt);
 
 			if(rxDone)
+			{
+				cmdSlotTag = reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag;
 				SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
+
+				if(KvFtlGetPendingPutCompletion(cmdSlotTag) != 0)
+				{
+					KvFtlClearPendingPutCompletion(cmdSlotTag);
+					nvmeCPL.dword[0] = 0;
+					nvmeCPL.specific = 0;
+					set_auto_nvme_cpl(cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+				}
+			}
 		}
 		else
 		{
@@ -662,4 +677,3 @@ void CheckDoneNvmeDmaReq()
 		reqSlotTag = prevReq;
 	}
 }
-

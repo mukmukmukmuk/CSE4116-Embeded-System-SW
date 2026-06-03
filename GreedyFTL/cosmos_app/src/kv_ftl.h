@@ -27,4 +27,8 @@ void KvFtlSetPendingGetLength(unsigned int cmdSlotTag, unsigned int valueLength)
 unsigned int KvFtlGetPendingGetLength(unsigned int cmdSlotTag);
 void KvFtlClearPendingGetLength(unsigned int cmdSlotTag);
 
+void KvFtlSetPendingPutCompletion(unsigned int cmdSlotTag);
+unsigned int KvFtlGetPendingPutCompletion(unsigned int cmdSlotTag);
+void KvFtlClearPendingPutCompletion(unsigned int cmdSlotTag);
+
 #endif /* KV_FTL_H_ */

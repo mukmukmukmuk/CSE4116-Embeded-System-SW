@@ -16,6 +16,7 @@ static P_KV_FTL_ENTRY kvFtlIndex = (P_KV_FTL_ENTRY)KV_FTL_INDEX_TABLE_ADDR;
 static unsigned int kvFtlInitialized = 0;
 static unsigned int kvFtlNextLba = 0;
 static unsigned int kvFtlPendingGetLength[KV_FTL_CMD_SLOT_COUNT];
+static unsigned int kvFtlPendingPutCompletion[KV_FTL_CMD_SLOT_COUNT];
 
 void InitKvFtl(void)
 {
@@ -35,7 +36,10 @@ void InitKvFtl(void)
 	}
 
 	for(key = 0; key < KV_FTL_CMD_SLOT_COUNT; key++)
+	{
 		kvFtlPendingGetLength[key] = 0;
+		kvFtlPendingPutCompletion[key] = 0;
+	}
 
 	kvFtlNextLba = 0;
 	kvFtlInitialized = 1;
@@ -93,6 +97,30 @@ void KvFtlClearPendingGetLength(unsigned int cmdSlotTag)
 		return;
 
 	kvFtlPendingGetLength[cmdSlotTag] = 0;
+}
+
+void KvFtlSetPendingPutCompletion(unsigned int cmdSlotTag)
+{
+	if(cmdSlotTag >= KV_FTL_CMD_SLOT_COUNT)
+		return;
+
+	kvFtlPendingPutCompletion[cmdSlotTag] = 1;
+}
+
+unsigned int KvFtlGetPendingPutCompletion(unsigned int cmdSlotTag)
+{
+	if(cmdSlotTag >= KV_FTL_CMD_SLOT_COUNT)
+		return 0;
+
+	return kvFtlPendingPutCompletion[cmdSlotTag];
+}
+
+void KvFtlClearPendingPutCompletion(unsigned int cmdSlotTag)
+{
+	if(cmdSlotTag >= KV_FTL_CMD_SLOT_COUNT)
+		return;
+
+	kvFtlPendingPutCompletion[cmdSlotTag] = 0;
 }
 
 unsigned int KvFtlGet(unsigned int key,
