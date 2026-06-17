@@ -1,0 +1,76 @@
+diff --git a/drivers/nvme/host/core.c b/drivers/nvme/host/core.c
+index f3071bd11..600be71be 100644
+--- a/drivers/nvme/host/core.c
++++ b/drivers/nvme/host/core.c
+@@ -4,6 +4,9 @@
+  * Copyright (c) 2011-2014, Intel Corporation.
+  */
+ 
++//embe-prj4
++#include <linux/string.h>
++
+ #include <linux/blkdev.h>
+ #include <linux/blk-mq.h>
+ #include <linux/compat.h>
+@@ -118,6 +121,13 @@ static void nvme_remove_invalid_namespaces(struct nvme_ctrl *ctrl,
+ static void nvme_update_keep_alive(struct nvme_ctrl *ctrl,
+ 				   struct nvme_command *cmd);
+ 
++
++//embe-prj4
++static bool nvme_is_cosmos_openssd(const struct nvme_id_ctrl *id)
++{
++	return !strncasecmp(id->mn,"COSMOS+",7);
++}
++
+ /*
+  * Prepare a queue for teardown.
+  *
+@@ -2911,7 +2921,9 @@ static int nvme_init_non_mdts_limits(struct nvme_ctrl *ctrl)
+ 	struct nvme_id_ctrl_nvm *id;
+ 	int ret;
+ 
+-	if (ctrl->oncs & NVME_CTRL_ONCS_DSM) {
++	//embe-prj4
++	if (ctrl->oncs & NVME_CTRL_ONCS_DSM &&
++		!(ctrl->quirks & NVME_QUIRK_NO_DISCARD)) {
+ 		ctrl->max_discard_sectors = UINT_MAX;
+ 		ctrl->max_discard_segments = NVME_DSM_MAX_RANGES;
+ 	} else {
+@@ -2934,6 +2946,10 @@ static int nvme_init_non_mdts_limits(struct nvme_ctrl *ctrl)
+ 	if (nvme_ctrl_limited_cns(ctrl))
+ 		return 0;
+ 
++	//embe-prj4
++	if(nvme_ctrl_limited_cns(ctrl) || (ctrl->quirks & NVME_QUIRK_NO_DISCARD))
++		return 0;
++
+ 	id = kzalloc(sizeof(*id), GFP_KERNEL);
+ 	if (!id)
+ 		return -ENOMEM;
+@@ -2982,6 +2998,11 @@ static int nvme_init_identify(struct nvme_ctrl *ctrl)
+ 
+ 	if (!ctrl->identified) {
+ 		unsigned int i;
++		
++		//embe-prj4
++		if(nvme_is_cosmos_openssd(id))
++			ctrl->quirks |= NVME_QUIRK_NO_DISCARD;
++
+ 
+ 		/*
+ 		 * Check for quirks.  Quirk can depend on firmware version,
+diff --git a/drivers/nvme/host/nvme.h b/drivers/nvme/host/nvme.h
+index c8ec0e146..51f297571 100644
+--- a/drivers/nvme/host/nvme.h
++++ b/drivers/nvme/host/nvme.h
+@@ -164,6 +164,9 @@ enum nvme_quirks {
+ 	 * Disables simple suspend/resume path.
+ 	 */
+ 	NVME_QUIRK_FORCE_NO_SIMPLE_SUSPEND	= (1 << 20),
++
++	// embe-prj4
++	NVME_QUIRK_NO_DISCARD				= (1 << 21),
+ };
+ 
+ /*

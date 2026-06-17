@@ -26,8 +26,8 @@ This compiles `kv_fs_bench` using the file-based KVS backend implementation (`kv
 Before running the benchmark for the first time, you must create an ext4 file system on the Cosmos+ OpenSSD platform (e.g., use /dev/nvme1n1 as the benchmark device):
 
 ```bash
-sudo umount /dev/nvme1n1 2>/dev/null || true
-sudo mkfs.ext4 -F /dev/nvme1n1
+sudo umount /dev/nvme0n1 2>/dev/null || true
+sudo mkfs.ext4 -F /dev/nvme0n1
 ````
 
 * **Make sure /dev/nvme1n1 is NOT your OS/root disk**.
@@ -42,14 +42,14 @@ sudo mkfs.ext4 -F /dev/nvme1n1
 
 | Position | Meaning                                        | Example        |
 | -------- | ---------------------------------------------- | -------------- |
-| 1        | NVMe device node                               | `/dev/nvme1n1` |
+| 1        | NVMe device node                               | `/dev/nvme0n1` |
 | 2        | Number of PUT operations                       | `10000`        |
 | 3        | Keyspace size (range of random key generation) | `4096`         |
 
 Example:
 
 ```bash
-sudo ./kv_fs_bench /dev/nvme1n1 10000 4096
+sudo ./kv_fs_bench /dev/nvme0n1 100000 524288
 ```
 
 The program automatically mounts the device under `/mnt/cosmos_test` before running and unmounts it after completion.

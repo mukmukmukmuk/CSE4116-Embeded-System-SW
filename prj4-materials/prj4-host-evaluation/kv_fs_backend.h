@@ -7,7 +7,7 @@
 #define ENOSUCHKEY 0x7C1
 
 #ifndef KV_FSYNC_PERIOD
-#define KV_FSYNC_PERIOD 1   // default policy: call fsync per single PUT
+#define KV_FSYNC_PERIOD 1000   // default policy: call fsync per single PUT
 #endif
 
 const unsigned int KEY_SIZE   = 4;

@@ -105,7 +105,7 @@ Now git status should show:
 You will submit one patch file that contains all changes from the baseline to your final version.
 
 ```bash
-git diff baseline -- > prj4-kernel-{student_id}.patch
+git diff baseline -- > prj4-kernel-20211496.patch
 ````
 
 Replace `{student_id}` with your student ID (e.g., 20241234).

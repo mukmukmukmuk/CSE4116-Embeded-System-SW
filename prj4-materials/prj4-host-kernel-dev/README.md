@@ -83,7 +83,7 @@ make ARCH=x86_64 CC=gcc-9 olddefconfig
 ### 4. Build and Install the New Kernel
 
 ```bash
-make ARCH=x86_64 CC=gcc-9 -j"$(nproc)"
+sudo make ARCH=x86_64 CC=gcc-9 -j"$(nproc)"
 sudo make ARCH=x86_64 CC=gcc-9 modules_install
 sudo make ARCH=x86_64 CC=gcc-9 install
 sudo update-grub
